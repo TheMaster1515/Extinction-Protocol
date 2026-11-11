@@ -78,7 +78,9 @@ def chapterx():
                 continue
             game = chapter8.Game()
             game.chapter8()
-
+        elif success == "15":
+            game = chapter8.Game()
+            game.chapter8()
 
         else:
             print("\n\tInvalid option. Please enter 1 through 7.")
