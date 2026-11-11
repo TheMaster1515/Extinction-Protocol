@@ -153,7 +153,7 @@ enemy_speed = 1
 friend_speed = 5
 
 # Variables
-MAX_LIVES = 1
+MAX_LIVES = 3
 lives = MAX_LIVES  # Add this line to initialize lives
 
 
