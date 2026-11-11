@@ -1,6 +1,7 @@
 import cv2
 import time
 import chapter8
+import character_data
 
 def drawEasterEgg7():
     print("            01010100 				")
@@ -39,25 +40,19 @@ class Game:
         try:
             with open(filename, 'r') as f:
                 lines = f.readlines()
-                person = lines[0].split(": ")[1].strip()
-                ship = lines[1].split(": ")[1].strip()
+                person = lines[3].split(": ")[1].strip()
+                ship = lines[4].split(": ")[1].strip()
             return person, ship
         except (FileNotFoundError, IndexError):
             return "Unknown", "Unknown"
 
     def recallCharacterJob(self, filename):
-        try:
-            with open(filename, 'r') as f:
-                lines = f.readlines()
-                job = lines[0].split(": ")[1].strip()
-            return job
-        except (FileNotFoundError, IndexError):
-            return "Unknown"
+        return character_data.read_character(filename).get("Job", "Unknown")
 
     def chapter7(self):
-        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/data.txt")
+        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/character.txt")
         recalledPerson, recalledShip = self.recallCharacterWork("files/character.txt")
-        recalledJob = self.recallCharacterJob("files/job.txt")
+        recalledJob = self.recallCharacterJob("files/character.txt")
         print("Here is your character's information")
         print(f"Name: {recalledName}")
         print(f"Age: {recalledAge}")

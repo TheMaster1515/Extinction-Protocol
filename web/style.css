@@ -17,7 +17,7 @@ button:disabled { opacity: .6; cursor: wait; }
 .story { background-size: cover; background-position: center; }
 #output { min-height: 300px; max-height: 58vh; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 1rem/1.5 ui-monospace, monospace; background: #09111ddd; padding: 1rem; border-radius: 6px; }
 #input-form { margin-top: 1rem; }
-#prompt { display: block; white-space: pre-wrap; margin-bottom: .5rem; color: #70dcb4; }
+#prompt { display: block; white-space: normal; margin-bottom: .5rem; padding: .5rem; border-radius: 6px; background: #e0e7f0; color: #000; font-family: "Retro", monospace; }
 .input-row { display: flex; gap: .5rem; }
 input { min-width: 0; flex: 1; background: #101d2d; border: 1px solid #52657a; color: white; border-radius: 6px; padding: .75rem; font: inherit; }
 .error { color: #ffb1ad; padding: 1rem; background: #4a2228; border-radius: 6px; }

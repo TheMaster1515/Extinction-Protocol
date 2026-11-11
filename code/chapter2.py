@@ -2,6 +2,12 @@ import cv2
 import time
 import chapter2Earth
 import chapter2Moon
+import character_data
+
+
+def save_job(job):
+    character_data.update_character("files/character.txt", Job=job)
+
 
 class Game:
     def recallCharacterData(self, filename):
@@ -19,20 +25,14 @@ class Game:
         try:
             with open(filename, 'r') as f:
                 lines = f.readlines()
-                person = lines[0].split(": ")[1].strip()
-                ship = lines[1].split(": ")[1].strip()
+                person = lines[3].split(": ")[1].strip()
+                ship = lines[4].split(": ")[1].strip()
             return person, ship
         except (FileNotFoundError, IndexError):
             return "Unknown", "Unknown"
 
     def recallCharacterJob(self, filename):
-        try:
-            with open(filename, 'r') as f:
-                lines = f.readlines()
-                job = lines[0].split(": ")[1].strip()
-            return job
-        except (FileNotFoundError, IndexError):
-            return "Unknown"
+        return character_data.read_character(filename).get("Job", "Unknown")
 
 
     def Chapter2Earth(self):
@@ -44,9 +44,9 @@ class Game:
         return game.Chapter2Moon()
 
     def chapter2(self):
-        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/data.txt")
+        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/character.txt")
         recalledPerson, recalledShip = self.recallCharacterWork("files/character.txt")
-        recalledJob = self.recallCharacterJob("files/job.txt")
+        recalledJob = self.recallCharacterJob("files/character.txt")
         print("Here is your character's information")
         print(f"Name: {recalledName}")
         print(f"Age: {recalledAge}")
@@ -168,9 +168,7 @@ class Game:
                 print("\ngo through basic training and be evaluated to see what is the best fit.")
                 print("\nPress Enter to continue...")
                 characterJob = "Pilot"
-                # save to file
-                with open("files/job.txt", "w") as f:
-                    f.write(f"Job: {characterJob}\n")
+                save_job(characterJob)
                 input()
                 self.Chapter2Moon()
             elif success == 2:
@@ -178,8 +176,7 @@ class Game:
                 print("\ngo through basic training and be evaluated to see what is the best fit.")
                 print("\nPress Enter to continue...")
                 characterJob = "Commander"
-                with open("files/job.txt", "w") as f:
-                    f.write(f"Job: {characterJob}\n")
+                save_job(characterJob)
                 input()
                 self.Chapter2Moon()
             elif success == 3:
@@ -187,8 +184,7 @@ class Game:
                 print("\ngo through basic training and be evaluated to see what is the best fit.")
                 print("\nPress Enter to continue...")
                 characterJob = "Recon"
-                with open("files/job.txt", "w") as f:
-                    f.write(f"Job: {characterJob}\n")
+                save_job(characterJob)
                 input()
                 self.Chapter2Earth()
             elif success == 4:
@@ -196,8 +192,7 @@ class Game:
                 print("\ngo through basic training and be evaluated to see what is the best fit.")
                 print("\nPress Enter to continue...")
                 characterJob = "Engineer"
-                with open("files/job.txt", "w") as f:
-                    f.write(f"Job: {characterJob}\n")
+                save_job(characterJob)
                 input()
                 self.Chapter2Earth()
             break

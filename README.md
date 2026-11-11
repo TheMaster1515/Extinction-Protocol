@@ -19,10 +19,20 @@ to the story using the button below the game.
 After losing all lives, enter three initials and press Enter or click **Save
 score** to add your score to the high-score list.
 
-Each player gets a separate temporary story session. Arcade high scores are
+Each player gets a separate temporary story session. The most recently created
+character's name, age, colony, friend, ship, and job are saved together in
+`files/character.txt` on the server. Designing a new character replaces the name,
+age, and colony; the friend, ship, and job remain until new choices are made.
+Choose **Start at a level** to go straight to chapter selection using the saved
+character, or **Design your character** to enter new details. If no character
+is saved, missing details are shown as Unknown and age is 0.
+An existing job in the older `files/job.txt` is carried over if the character
+file has no job; the old file is left untouched. Character data is shared
+between players and does not restore other story progress.
+Arcade high scores are
 shared and saved in `files/HighScores.txt` on the server. Story progress is
 lost when starting over, reloading and starting a new game, server restarts,
-or 30 minutes without an active page. High scores survive browser reloads, but
+or 30 minutes without an active page. Saved files survive browser reloads, but
 may be lost when the server restarts or redeploys if its filesystem is
 ephemeral. The server supports up to 20 simultaneous sessions. Run only one
 server process, because sessions are held in that process's memory.

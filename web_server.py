@@ -19,14 +19,40 @@ from urllib.parse import unquote, urlsplit
 
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "code"))
+import character_data
+
 SESSION_LIMIT = 20
 SESSION_TIMEOUT = 30 * 60
 MAX_EVENTS = 10000
 MAX_HIGH_SCORES = 5
 HIGH_SCORES_FILE = ROOT / "files" / "HighScores.txt"
+CHARACTER_DATA_FILE = ROOT / "files" / "character.txt"
 sessions = {}
 sessions_lock = threading.Lock()
 high_scores_lock = threading.Lock()
+character_data_lock = threading.Lock()
+character_data_owner = None
+
+
+def save_character_file(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=".character.", suffix=".tmp", delete=False,
+        ) as output:
+            temporary_path = Path(output.name)
+            output.write(content)
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def save_character_data(content):
+    save_character_file(CHARACTER_DATA_FILE, content)
 
 
 def read_high_scores():
@@ -93,9 +119,49 @@ class Session:
         threading.Thread(target=self.read_events, daemon=True).start()
 
     def read_events(self):
+        global character_data_owner
         try:
             for line in self.process.stdout:
                 event = json.loads(line)
+                if event["type"] == "character_resume":
+                    try:
+                        with character_data_lock:
+                            data = character_data.read_character(CHARACTER_DATA_FILE)
+                            has_character = all(field in data for field in ("Name", "Age", "Colony"))
+                            data = character_data.prepare_character(data)
+                            save_character_file(
+                                Path(self.directory.name) / "files" / "character.txt",
+                                character_data.format_character(data),
+                            )
+                            character_data_owner = self
+                        response = {"ok": True, "has_character": has_character}
+                    except (OSError, UnicodeError, ValueError):
+                        logging.exception("Unable to load character data")
+                        response = {"ok": False}
+                    with self.lock:
+                        if not self.closed:
+                            self.process.stdin.write(json.dumps(response) + "\n")
+                            self.process.stdin.flush()
+                    continue
+                if event["type"] in ("character_data", "character_update"):
+                    try:
+                        with character_data_lock:
+                            if event["type"] == "character_data":
+                                character_data_owner = None
+                                data = character_data.read_character(CHARACTER_DATA_FILE)
+                                current = character_data.parse_character(event["content"])
+                                data.update({field: current[field] for field in ("Name", "Age", "Colony")})
+                                content = character_data.format_character(data)
+                                save_character_data(content)
+                                save_character_file(Path(self.directory.name) / "files" / "character.txt", content)
+                                character_data_owner = self
+                            elif character_data_owner is self:
+                                save_character_data(event["content"])
+                    except (OSError, UnicodeError, ValueError):
+                        logging.exception("Unable to save character data")
+                        with self.lock:
+                            self.events.append({"type": "error", "message": "Unable to save character data on the server."})
+                    continue
                 with self.lock:
                     if len(self.events) >= MAX_EVENTS:
                         self.events.clear()

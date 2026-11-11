@@ -1,4 +1,5 @@
 import time
+import character_data
 import chapter3
 
 def drawEasterEggMoon():
@@ -32,26 +33,20 @@ class Game:
         try:
             with open(filename, 'r') as f:
                 lines = f.readlines()
-                person = lines[0].split(": ")[1]
-                ship = lines[1].split(": ")[1]
+                person = lines[3].split(": ")[1]
+                ship = lines[4].split(": ")[1]
             return person, ship
         except (FileNotFoundError, IndexError):
             return "Unknown", "Unknown"
 
     def recallCharacterJob(self, filename):
-        try:
-            with open(filename, 'r') as f:
-                lines = f.readlines()
-                job = lines[0].split(": ")[1]
-            return job
-        except (FileNotFoundError, IndexError):
-            return "Unknown"
+        return character_data.read_character(filename).get("Job", "Unknown")
 
 
     def Chapter2Moon(self):
-        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/data.txt")
+        recalledName, recalledAge, recalledColony = self.recallCharacterData("files/character.txt")
         recalledPerson, recalledShip = self.recallCharacterWork("files/character.txt")
-        recalledJob = self.recallCharacterJob("files/job.txt")
+        recalledJob = self.recallCharacterJob("files/character.txt")
         while True:
             print("\n\n\n\n**************************************************Chapter 2***************************************************")
             print("\nYou get your job now and then the soldiers excort you to small crafts in an airfield. They herd dozens of")
@@ -231,12 +226,10 @@ class Game:
             print("\nnotice somebody you know in line. You see your friend you met at the camp on earth! You say \"Hey! I remember you")
             print("\nfrom the camp on earth! I never got your name. What was your name?\"")
             characterPerson = input("\nEnter your friends name: ")
-            if not characterPerson:
+            if not characterPerson.strip():
                 print("\n\tNothing entered. Please enter some text.")
                 continue
-            with open("files/character.txt", "w") as f:
-                f.write(f"Person: {characterPerson}\n")
-                f.write(f"Ship: \n")
+            character_data.save_character_work(characterPerson)
             print("\n\n\n\n**************************************************Chapter 2***************************************************")
             print(f"\n\"Hey {characterPerson} how have you been doing? This is all crazy isn't it? The Tau Ceties are coming? and")
             print(f"\nThe Polarians are here to help us? I am getting very overwhelmed.\" He replies \"Hey {recalledName} yes I")
@@ -250,12 +243,10 @@ class Game:
             print("\nend of the line and a soldier says \"Let me see your ticket\" You pull out your ticket and he scans the code.")
             print("\nHe says \"You can choose from these ships. The Stargazer, The Nostromo, and The Phoenix\"")
             characterShip = input("\nPlease type which ship you would like to be stationed on: ")
-            if not characterShip:
+            if not characterShip.strip():
                 print("\n\tNothing entered. Please enter some text.")
                 continue
-            with open("files/character.txt", "w") as f:
-                f.write(f"Person: {characterPerson}\n")
-                f.write(f"Ship: {characterShip}\n")
+            character_data.save_character_work(characterPerson, characterShip)
             print("\n\n\n\n**************************************************Chapter 2***************************************************")
             print(f"\nYou have choosen {characterShip}. Congrats! Your friend {characterPerson} got assigned the exact same ship!")
             print("\nYou are led outside by a soldier. Before going out the airlock you are given a small device that he says \"This is your")

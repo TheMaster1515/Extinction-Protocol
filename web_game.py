@@ -70,6 +70,39 @@ def main():
     sys.stdout = Output()
     try:
         import chapterZ
+        import chapter2
+        import character_data
+
+        class WebCharacterManager(chapterZ.CharacterManager):
+            def save_character_data(self, name, age, colony, filepath):
+                super().save_character_data(name, age, colony, filepath)
+                emit("character_data", content=Path(filepath).read_text())
+
+            def prepare_existing_character(self, filepath):
+                emit("character_resume")
+                line = protocol_in.readline()
+                if not line:
+                    raise EOFError("Player disconnected")
+                result = json.loads(line)
+                if not result["ok"]:
+                    raise RuntimeError("Unable to load character data on the server.")
+                return result["has_character"]
+
+        save_job = chapter2.save_job
+
+        def save_web_job(job):
+            save_job(job)
+            emit("character_update", content=Path("files/character.txt").read_text(encoding="utf-8"))
+
+        save_character_work = character_data.save_character_work
+
+        def save_web_character_work(person, ship=None):
+            save_character_work(person, ship)
+            emit("character_update", content=Path("files/character.txt").read_text(encoding="utf-8"))
+
+        chapterZ.CharacterManager = WebCharacterManager
+        chapter2.save_job = save_web_job
+        character_data.save_character_work = save_web_character_work
         chapterZ.chapterz()
     except EOFError:
         pass

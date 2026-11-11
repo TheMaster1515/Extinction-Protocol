@@ -1,19 +1,20 @@
 # chapterZ.py
-import os
 import time
 import chapterX
+import character_data
 
 
 
 class CharacterManager:
     def save_character_data(self, name, age, colony, filepath):
-        # Ensure the folder exists
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        
-        with open(filepath, "w") as f:
-            f.write(f"Name: {name}\n")
-            f.write(f"Age: {age}\n")
-            f.write(f"Colony: {colony}\n")
+        character_data.update_character(filepath, Name=name, Age=age, Colony=colony)
+
+    def prepare_existing_character(self, filepath):
+        data = character_data.read_character(filepath)
+        has_character = all(field in data for field in ("Name", "Age", "Colony"))
+        data = character_data.prepare_character(data)
+        character_data.update_character(filepath, **data)
+        return has_character
 
 
 
@@ -26,6 +27,20 @@ def chapterz():
 
     
     print("Welcome to Extinction Protocol!\n")
+    print("Would you like to pick a level to start at or design your character.\n")
+    while True:
+        print("1. Start at a level")
+        print("2. Design your character")
+        choice = input("Choose an option (1 or 2): ").strip()
+        if choice == "1":
+            if not character_manager.prepare_existing_character("files/character.txt"):
+                print("\nNo saved character found. Missing details will be Unknown and age will be 0.")
+            chapterX.chapterx()
+            return True
+        if choice == "2":
+            break
+        print("\nInvalid option. Please enter 1 or 2.\n")
+
     print("This will be where you design your character. Choose the following:\n")
 
     # Character name input
@@ -65,7 +80,7 @@ def chapterz():
     input()
 
     # Save character data
-    character_manager.save_character_data(character_name, character_age, character_colony, "files/data.txt")
+    character_manager.save_character_data(character_name, character_age, character_colony, "files/character.txt")
 
     # Move to next chapter
     chapterX.chapterx()

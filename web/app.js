@@ -104,7 +104,7 @@ $("start").addEventListener("click", async () => {
 });
 
 $("restart").addEventListener("click", async () => {
-  if (!confirm("Start over? Your current progress will be lost.")) return;
+  if (!confirm("Are you sure you would like to start over?")) return;
   $("restart").disabled = true;
   try {
     await request("/api/stop", {});

@@ -1,0 +1,6 @@
+Name: Alex
+Age: 35
+Colony: China
+Person: Lee
+Ship: Nostromo
+Job: Commander
