@@ -25,7 +25,7 @@ def chapterz():
     character_colony = ""
 
     
-    print("Welcome to the Text-Based Game!\n")
+    print("Welcome to Extinction Protocol!\n")
     print("This will be where you design your character. Choose the following:\n")
 
     # Character name input
