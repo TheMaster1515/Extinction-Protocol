@@ -169,7 +169,7 @@ friends = []
 asteroids = []
 
 # Constants
-MAX_LIVES = 1
+MAX_LIVES = 3
 
 # Variables
 lives = MAX_LIVES
