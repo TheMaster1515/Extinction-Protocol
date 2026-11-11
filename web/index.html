@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10141d">
+  <title>Extinction Protocol</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">A SCI-FI TEXT ADVENTURE</p>
+        <h1>Extinction Protocol</h1>
+      </div>
+      <button id="restart" class="secondary" hidden>Start over</button>
+    </header>
+    <section id="welcome" class="panel welcome">
+      <h2>Your story starts here.</h2>
+      <p>Make your choices, explore the chapters, and discover what is hidden among the stars.</p>
+      <p class="muted">Progress is temporary and will be lost when your session expires or the server restarts.</p>
+      <button id="start">Start adventure</button>
+    </section>
+    <section id="story" class="panel story" hidden>
+      <div id="output" role="log" aria-live="polite" aria-label="Game story"></div>
+      <form id="input-form" hidden>
+        <label id="prompt" for="answer"></label>
+        <div class="input-row">
+          <input id="answer" autocomplete="off" maxlength="1024">
+          <button type="submit">Continue</button>
+        </div>
+      </form>
+      <p id="status" class="muted" role="status">Starting game…</p>
+    </section>
+    <section id="arcade" class="panel arcade" hidden>
+      <h2>Chapter 8: The Hunt for the Egg</h2>
+      <p>Move with the arrow keys or the controls below. Press X or Fire to shoot. Collect prizes and avoid enemy fire.</p>
+      <canvas id="canvas" width="1000" height="600" aria-label="Chapter 8 arcade game"></canvas>
+      <p id="arcade-status" role="status"></p>
+      <div class="controls">
+        <button id="arcade-start">Play</button>
+        <button id="arcade-finish" class="secondary">Return to story</button>
+      </div>
+      <div class="touch-controls" aria-label="Arcade controls">
+        <button data-key="ArrowLeft" aria-label="Move left">←</button>
+        <button data-key="ArrowUp" aria-label="Move up">↑</button>
+        <button data-key="ArrowDown" aria-label="Move down">↓</button>
+        <button data-key="ArrowRight" aria-label="Move right">→</button>
+        <button data-key="x">Fire</button>
+      </div>
+    </section>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <script src="/static/arcade.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

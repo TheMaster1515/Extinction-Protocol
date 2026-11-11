@@ -34,47 +34,43 @@ def chapterx():
             print("\n\t8.Chapter 8")
 
         try:
-            success = int(input("\nChoose an option (1 through 7): "))
+            success = input("\nChoose an option (1 through 7): ").strip()
+            if success not in ("1", "2", "2.1", "2.2", "3", "4", "5", "6", "7", "8"):
+                raise ValueError
         except ValueError:
             print("\n\tInvalid option. Please enter 1 through 7.")
             pause(3)
             print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
             continue
 
-        if success < 1 or success > 8:
-            print("\n\tInvalid option. Please enter 1 through 7.")
-            pause(3)
-            print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-            continue
-
-        if success == 1:
+        if success == "1":
             game = chapter1.Game()
             game.chapter1()
-        elif success == 2:
+        elif success == "2":
             game = chapter2.Game()
             game.chapter2()
-        elif success == 2.1:
+        elif success == "2.1":
             game = chapter2Earth.Game()
             game.Chapter2Earth()
-        elif success == 2.2:
+        elif success == "2.2":
             game = chapter2Moon.Game()
             game.Chapter2Moon()
-        elif success == 3:
+        elif success == "3":
             game = chapter3.Game()
             game.chapter3()
-        elif success == 4:
+        elif success == "4":
             game = chapter4.Game()
             game.chapter4()
-        elif success == 5:
+        elif success == "5":
             game = chapter5.Game()
             game.chapter5()
-        elif success == 6:
+        elif success == "6":
             game = chapter6.Game()
             game.chapter6()
-        elif success == 7:
+        elif success == "7":
             game = chapter7.Game()
             game.chapter7()
-        elif success == 8:
+        elif success == "8":
             if not os.path.exists("files/chapter8_complete.txt"):
                 print("\n\tChapter 8 is locked. Complete the game first to unlock it.")
                 pause(3)
