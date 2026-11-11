@@ -27,32 +27,25 @@ SESSION_TIMEOUT = 30 * 60
 MAX_EVENTS = 10000
 MAX_HIGH_SCORES = 5
 HIGH_SCORES_FILE = ROOT / "files" / "HighScores.txt"
-CHARACTER_DATA_FILE = ROOT / "files" / "character.txt"
 sessions = {}
 sessions_lock = threading.Lock()
 high_scores_lock = threading.Lock()
-character_data_lock = threading.Lock()
-character_data_owner = None
 
 
-def save_character_file(path, content):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=path.parent,
-            prefix=".character.", suffix=".tmp", delete=False,
-        ) as output:
-            temporary_path = Path(output.name)
-            output.write(content)
-        os.replace(temporary_path, path)
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
-
-
-def save_character_data(content):
-    save_character_file(CHARACTER_DATA_FILE, content)
+def valid_character(data):
+    if not isinstance(data, dict) or set(data) - set(character_data.FIELDS):
+        return False
+    for field, value in data.items():
+        if not isinstance(value, str) or not value.strip() or len(value) > 1024:
+            return False
+        if any(
+            char in "\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029" or 0xD800 <= ord(char) <= 0xDFFF
+            for char in value
+        ):
+            return False
+        if field == "Age" and (not value.isascii() or not value.isdigit() or int(value) > 150):
+            return False
+    return True
 
 
 def read_high_scores():
@@ -103,14 +96,23 @@ def write_high_scores(scores):
 
 
 class Session:
-    def __init__(self):
+    def __init__(self, character):
         self.directory = tempfile.TemporaryDirectory(prefix="extinction-")
-        self.process = subprocess.Popen(
-            [sys.executable, "-B", "-u", str(ROOT / "web_game.py")],
-            cwd=self.directory.name,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            text=True, encoding="utf-8", bufsize=1,
-        )
+        try:
+            if character:
+                character_data.update_character(
+                    Path(self.directory.name) / "files" / "character.txt",
+                    **character_data.prepare_character(character),
+                )
+            self.process = subprocess.Popen(
+                [sys.executable, "-B", "-u", str(ROOT / "web_game.py")],
+                cwd=self.directory.name,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                text=True, encoding="utf-8", bufsize=1,
+            )
+        except OSError:
+            self.directory.cleanup()
+            raise
         self.events = deque()
         self.lock = threading.Lock()
         self.last_seen = time.monotonic()
@@ -119,49 +121,9 @@ class Session:
         threading.Thread(target=self.read_events, daemon=True).start()
 
     def read_events(self):
-        global character_data_owner
         try:
             for line in self.process.stdout:
                 event = json.loads(line)
-                if event["type"] == "character_resume":
-                    try:
-                        with character_data_lock:
-                            data = character_data.read_character(CHARACTER_DATA_FILE)
-                            has_character = all(field in data for field in ("Name", "Age", "Colony"))
-                            data = character_data.prepare_character(data)
-                            save_character_file(
-                                Path(self.directory.name) / "files" / "character.txt",
-                                character_data.format_character(data),
-                            )
-                            character_data_owner = self
-                        response = {"ok": True, "has_character": has_character}
-                    except (OSError, UnicodeError, ValueError):
-                        logging.exception("Unable to load character data")
-                        response = {"ok": False}
-                    with self.lock:
-                        if not self.closed:
-                            self.process.stdin.write(json.dumps(response) + "\n")
-                            self.process.stdin.flush()
-                    continue
-                if event["type"] in ("character_data", "character_update"):
-                    try:
-                        with character_data_lock:
-                            if event["type"] == "character_data":
-                                character_data_owner = None
-                                data = character_data.read_character(CHARACTER_DATA_FILE)
-                                current = character_data.parse_character(event["content"])
-                                data.update({field: current[field] for field in ("Name", "Age", "Colony")})
-                                content = character_data.format_character(data)
-                                save_character_data(content)
-                                save_character_file(Path(self.directory.name) / "files" / "character.txt", content)
-                                character_data_owner = self
-                            elif character_data_owner is self:
-                                save_character_data(event["content"])
-                    except (OSError, UnicodeError, ValueError):
-                        logging.exception("Unable to save character data")
-                        with self.lock:
-                            self.events.append({"type": "error", "message": "Unable to save character data on the server."})
-                    continue
                 with self.lock:
                     if len(self.events) >= MAX_EVENTS:
                         self.events.clear()
@@ -282,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, {"error": "Expected JSON"})
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if length < 0 or length > 4096:
+            if length < 0 or length > 65536:
                 raise ValueError("Invalid content length")
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):
@@ -311,6 +273,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Unable to save high scores."})
             return self.reply(HTTPStatus.OK, {"scores": scores})
         if path == "/api/start":
+            character = data.get("character", {})
+            if not valid_character(character):
+                return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid saved character data."})
             old = self.session()
             if old:
                 with sessions_lock:
@@ -323,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
                 if len(sessions) >= SESSION_LIMIT:
                     return self.reply(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "The server is full. Please try again later."})
                 try:
-                    session = Session()
+                    session = Session(character)
                 except OSError:
                     logging.exception("Unable to start game")
                     return self.reply(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Unable to start the game."})
@@ -342,7 +307,13 @@ class Handler(BaseHTTPRequestHandler):
             session.stop()
             return self.reply(HTTPStatus.OK, {"ok": True}, headers={"Set-Cookie": "game_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"})
         value = data.get("value")
-        if not isinstance(value, str) or "\n" in value or "\r" in value or len(value) > 1024:
+        if (
+            not isinstance(value, str) or len(value) > 1024
+            or any(
+                char in "\r\n\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029" or 0xD800 <= ord(char) <= 0xDFFF
+                for char in value
+            )
+        ):
             return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid input"})
         with session.lock:
             if not session.waiting or session.closed or session.process.poll() is not None:

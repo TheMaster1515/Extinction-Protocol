@@ -32,7 +32,7 @@ class WebTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.character_file = Path(directory.name) / "files" / "character.txt"
         self.job_file = self.character_file.parent / "job.txt"
-        self.enterContext(mock.patch.object(web_server, "CHARACTER_DATA_FILE", self.character_file))
+        self.characters = {}
 
     def tearDown(self):
         with web_server.sessions_lock:
@@ -58,10 +58,11 @@ class WebTests(unittest.TestCase):
         connection.close()
         return status, headers, contents
 
-    def start(self, design=True):
-        status, headers, _ = self.request("POST", "/api/start", {})
+    def start(self, design=True, character=None):
+        status, headers, _ = self.request("POST", "/api/start", {"character": character or {}})
         self.assertEqual(status, 200)
         cookie = headers["Set-Cookie"].split(";", 1)[0]
+        self.characters[cookie] = dict(character or {})
         if design:
             self.wait_for(cookie, "input")
             self.answer(cookie, "2")
@@ -73,7 +74,11 @@ class WebTests(unittest.TestCase):
         while time.monotonic() < deadline:
             status, _, body = self.request("GET", "/api/events", cookie=cookie)
             self.assertEqual(status, 200)
-            events.extend(json.loads(body)["events"])
+            received = json.loads(body)["events"]
+            for event in received:
+                if event["type"] == "character_update":
+                    self.characters[cookie].update(event["changes"])
+            events.extend(received)
             if any(event["type"] == event_type for event in events):
                 return events
             time.sleep(0.02)
@@ -97,17 +102,9 @@ class WebTests(unittest.TestCase):
         self.assertTrue(any("character's name" in event.get("prompt", "") for event in events))
 
     def test_start_at_level_loads_latest_saved_character(self):
-        self.character_file.parent.mkdir(parents=True)
-        self.character_file.write_text(
-            "Name: Old\nAge: 20\nColony: China\nPerson: Friend\nShip: Star\nJob: Engineer\n",
-            encoding="utf-8",
-        )
-        cookie = self.start(design=False)
+        character = {"Name": "Latest", "Age": "30", "Colony": "Russia", "Person": "Friend", "Ship": "Star", "Job": "Pilot"}
+        cookie = self.start(design=False, character=character)
         self.wait_for(cookie, "input")
-        self.character_file.write_text(
-            "Name: Latest\nAge: 30\nColony: Russia\nPerson: Friend\nShip: Star\nJob: Pilot\n",
-            encoding="utf-8",
-        )
         self.answer(cookie, "1")
         events = self.wait_for(cookie, "input")
         self.assertIn("Choose which chapter", "".join(event.get("text", "") for event in events))
@@ -135,12 +132,8 @@ class WebTests(unittest.TestCase):
         self.assertFalse(any(event["type"] == "error" for event in events))
 
     def test_start_at_level_saves_subsequent_job_choice(self):
-        self.character_file.parent.mkdir(parents=True)
-        self.character_file.write_text(
-            "Name: Saved\nAge: 25\nColony: America\nPerson: Friend\nShip: Star\nJob: Engineer\n",
-            encoding="utf-8",
-        )
-        cookie = self.start(design=False)
+        character = {"Name": "Saved", "Age": "25", "Colony": "America", "Person": "Friend", "Ship": "Star", "Job": "Engineer"}
+        cookie = self.start(design=False, character=character)
         for value in ("1", "2", ""):
             self.wait_for(cookie, "input")
             self.answer(cookie, value)
@@ -149,10 +142,7 @@ class WebTests(unittest.TestCase):
         self.wait_for(cookie, "input")
         self.answer(cookie, "1")
         self.wait_for(cookie, "input")
-        self.assertEqual(
-            self.character_file.read_text(encoding="utf-8"),
-            "Name: Saved\nAge: 25\nColony: America\nPerson: Friend\nShip: Star\nJob: Pilot\n",
-        )
+        self.assertEqual(self.characters[cookie], {**character, "Job": "Pilot"})
 
     def test_story_and_isolated_player_data(self):
         first = self.start()
@@ -178,7 +168,9 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("Bob", first_data)
         self.assertIn("Bob", second_data)
         self.assertNotIn("Alice", second_data)
-        self.assertIn("Name: Bob\n", self.character_file.read_text(encoding="utf-8"))
+        self.assertEqual(self.characters[first]["Name"], "Alice")
+        self.assertEqual(self.characters[second]["Name"], "Bob")
+        self.assertFalse(self.character_file.exists())
 
         self.answer(second, "2.1")
         events = self.wait_for(second, "input")
@@ -201,35 +193,22 @@ class WebTests(unittest.TestCase):
             self.wait_for(cookie, "input")
             self.answer(cookie, value)
         self.wait_for(cookie, "input")
-        self.assertEqual(
-            self.character_file.read_text(encoding="utf-8"),
-            "Name: First player\nAge: 25\nColony: America\nPerson: Unknown\nShip: Unknown\nJob: Unknown\n",
-        )
+        saved = self.characters[cookie].copy()
+        self.assertEqual(saved, {"Name": "First player", "Age": "25", "Colony": "America"})
         self.assertEqual(self.request("POST", "/api/stop", {}, cookie)[0], 200)
-        self.assertTrue(self.character_file.exists())
 
-        cookie = self.start()
+        cookie = self.start(character=saved)
         for value in ("New player", "31", "China", ""):
             self.wait_for(cookie, "input")
             self.answer(cookie, value)
         self.wait_for(cookie, "input")
-        self.assertEqual(
-            self.character_file.read_text(encoding="utf-8"),
-            "Name: New player\nAge: 31\nColony: China\nPerson: Unknown\nShip: Unknown\nJob: Unknown\n",
-        )
+        self.assertEqual(self.characters[cookie], {"Name": "New player", "Age": "31", "Colony": "China"})
 
-    def test_character_save_failure_is_reported(self):
-        cookie = self.start()
-        with mock.patch.object(web_server, "save_character_data", side_effect=OSError("disk error")):
-            with self.assertLogs(level="ERROR"):
-                for value in ("Player", "25", "America", ""):
-                    self.wait_for(cookie, "input")
-                    self.answer(cookie, value)
-                events = self.wait_for(cookie, "input")
-        self.assertTrue(any(
-            event["type"] == "error" and "save character data" in event["message"]
-            for event in events
-        ))
+    def test_invalid_saved_character_is_rejected(self):
+        for character in ({"Age": "bad"}, {"Name": "Alice\nJob: Pilot"}, {"Extra": "value"}, []):
+            with self.subTest(character=character):
+                status, _, _ = self.request("POST", "/api/start", {"character": character})
+                self.assertEqual(status, 400)
 
     def test_friend_and_ship_are_combined_with_character_in_both_paths(self):
         for chapter, choices in (
@@ -237,12 +216,8 @@ class WebTests(unittest.TestCase):
             ("2.2", ("2", "2", "1", "1", "1")),
         ):
             with self.subTest(chapter=chapter):
-                self.character_file.parent.mkdir(parents=True, exist_ok=True)
-                self.character_file.write_text(
-                    "Name: Old\nAge: 20\nColony: China\nPerson: Old Friend\nShip: Old Ship\nJob: Engineer\n",
-                    encoding="utf-8",
-                )
-                cookie = self.start()
+                old = {"Name": "Old", "Age": "20", "Colony": "China", "Person": "Old Friend", "Ship": "Old Ship", "Job": "Engineer"}
+                cookie = self.start(character=old)
                 for value in ("Player", "25", "America", "", chapter):
                     self.wait_for(cookie, "input")
                     self.answer(cookie, value)
@@ -254,18 +229,15 @@ class WebTests(unittest.TestCase):
                 self.wait_for(cookie, "input")
                 self.answer(cookie, "Friend")
                 self.wait_for(cookie, "input")
-                self.assertEqual(
-                    self.character_file.read_text(encoding="utf-8"),
-                    "Name: Player\nAge: 25\nColony: America\nPerson: Friend\nShip: Old Ship\nJob: Engineer\n",
-                )
+                self.assertEqual(self.characters[cookie], {
+                    "Name": "Player", "Age": "25", "Colony": "America",
+                    "Person": "Friend", "Ship": "Old Ship", "Job": "Engineer",
+                })
                 self.answer(cookie, "")
                 self.wait_for(cookie, "input")
                 self.answer(cookie, "Stargazer")
                 self.wait_for(cookie, "input")
-                self.assertEqual(
-                    self.character_file.read_text(encoding="utf-8"),
-                    "Name: Player\nAge: 25\nColony: America\nPerson: Friend\nShip: Stargazer\nJob: Engineer\n",
-                )
+                self.assertEqual(self.characters[cookie]["Ship"], "Stargazer")
                 self.answer(cookie, "")
                 events = self.wait_for(cookie, "input")
                 output = "".join(event.get("text", "") for event in events)
@@ -273,7 +245,8 @@ class WebTests(unittest.TestCase):
                 self.assertIn("Friend: Friend", output)
                 self.assertIn("Ship: Stargazer", output)
                 self.assertEqual(self.request("POST", "/api/stop", {}, cookie)[0], 200)
-                cookie = self.start()
+                saved = self.characters[cookie].copy()
+                cookie = self.start(character=saved)
                 for value in ("Next", "30", "Russia", "", "3"):
                     self.wait_for(cookie, "input")
                     self.answer(cookie, value)
@@ -302,22 +275,23 @@ class WebTests(unittest.TestCase):
             self.wait_for(cookie, "input")
             self.answer(cookie, choice)
             self.wait_for(cookie, "input")
-        self.assertIn("Job: Engineer\n", self.character_file.read_text(encoding="utf-8"))
+        self.assertEqual(self.characters[second]["Job"], "Engineer")
+        self.assertEqual(self.characters[first]["Job"], "Pilot")
         self.assertFalse(self.job_file.exists())
-        self.assertIn("Name: Second\n", self.character_file.read_text(encoding="utf-8"))
+        self.assertEqual(self.characters[second]["Name"], "Second")
 
-        third = self.start()
+        third = self.start(character=self.characters[second])
         for value in ("Third", "30", "China", ""):
             self.wait_for(third, "input")
             self.answer(third, value)
         self.wait_for(third, "input")
-        self.assertIn("Job: Engineer\n", self.character_file.read_text(encoding="utf-8"))
+        self.assertEqual(self.characters[third]["Job"], "Engineer")
         self.answer(third, "3")
         events = self.wait_for(third, "input")
         output = "".join(event.get("text", "") for event in events)
         self.assertIn("Job: Engineer", output)
 
-        fourth = self.start()
+        fourth = self.start(character=self.characters[third])
         for value in ("Fourth", "28", "Russia", "", "2", ""):
             self.wait_for(fourth, "input")
             self.answer(fourth, value)
@@ -326,7 +300,7 @@ class WebTests(unittest.TestCase):
         self.wait_for(fourth, "input")
         self.answer(fourth, "1")
         self.wait_for(fourth, "input")
-        self.assertIn("Job: Pilot\n", self.character_file.read_text(encoding="utf-8"))
+        self.assertEqual(self.characters[fourth]["Job"], "Pilot")
 
     def test_new_game_without_previous_job_uses_unknown(self):
         cookie = self.start()
@@ -338,56 +312,18 @@ class WebTests(unittest.TestCase):
         self.assertIn("Job: Unknown", output)
         self.assertFalse(self.job_file.exists())
 
-    def test_legacy_job_is_migrated_without_overwriting_existing_job(self):
-        self.character_file.parent.mkdir(parents=True)
-        self.character_file.write_text(
-            "Name: Old\nAge: 20\nColony: China\nPerson: Friend\nShip: Star\n",
-            encoding="utf-8",
-        )
-        self.job_file.write_text("Job: Engineer\n", encoding="utf-8")
-        cookie = self.start()
-        for value in ("New", "25", "America", "", "3"):
-            self.wait_for(cookie, "input")
-            self.answer(cookie, value)
-        events = self.wait_for(cookie, "input")
-        self.assertIn("Job: Engineer", "".join(event.get("text", "") for event in events))
-        self.assertEqual(
-            self.character_file.read_text(encoding="utf-8"),
-            "Name: New\nAge: 25\nColony: America\nPerson: Friend\nShip: Star\nJob: Engineer\n",
-        )
-        self.job_file.write_text("Job: Pilot\n", encoding="utf-8")
-        cookie = self.start()
-        for value in ("Next", "30", "Russia", ""):
-            self.wait_for(cookie, "input")
-            self.answer(cookie, value)
-        self.wait_for(cookie, "input")
-        self.assertIn("Job: Engineer\n", self.character_file.read_text(encoding="utf-8"))
-        self.assertEqual(self.job_file.read_text(encoding="utf-8"), "Job: Pilot\n")
-
-    def test_empty_legacy_job_is_unknown(self):
-        self.character_file.parent.mkdir(parents=True)
-        self.job_file.write_text("", encoding="utf-8")
-        cookie = self.start()
-        for value in ("Player", "25", "America", ""):
-            self.wait_for(cookie, "input")
-            self.answer(cookie, value)
-        self.wait_for(cookie, "input")
-        self.assertIn("Job: Unknown\n", self.character_file.read_text(encoding="utf-8"))
-
-    def test_invalid_legacy_job_reports_failure_without_overwriting_save(self):
-        self.character_file.parent.mkdir(parents=True)
-        old_character = "Name: Old\nAge: 20\nColony: China\n"
-        self.character_file.write_text(old_character, encoding="utf-8")
-        self.job_file.write_text("invalid job\n", encoding="utf-8")
-        cookie = self.start()
-        with self.assertLogs(level="ERROR"):
-            for value in ("Player", "25", "America", ""):
+    def test_separate_browser_saves_remain_independent(self):
+        computer = {"Name": "Computer", "Age": "25", "Colony": "America", "Job": "Pilot"}
+        phone = {"Name": "Phone", "Age": "30", "Colony": "China", "Job": "Engineer"}
+        for character in (computer, phone, computer):
+            cookie = self.start(design=False, character=character)
+            for value in ("1", "3"):
                 self.wait_for(cookie, "input")
                 self.answer(cookie, value)
             events = self.wait_for(cookie, "input")
-        self.assertTrue(any(event["type"] == "error" for event in events))
-        self.assertEqual(self.character_file.read_text(encoding="utf-8"), old_character)
-        self.assertEqual(self.job_file.read_text(encoding="utf-8"), "invalid job\n")
+            output = "".join(event.get("text", "") for event in events)
+            self.assertIn(f"Name: {character['Name']}", output)
+            self.assertIn(f"Job: {character['Job']}", output)
 
     def test_local_character_updates_preserve_other_fields_and_migrate_job(self):
         self.character_file.parent.mkdir(parents=True)

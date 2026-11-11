@@ -1,6 +1,7 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
+const characterKey = "extinction.character";
 let running = false;
 let generation = 0;
 let submitting = false;
@@ -22,6 +23,25 @@ function showError(message) {
   $("error").hidden = false;
 }
 
+function loadCharacter() {
+  const saved = localStorage.getItem(characterKey);
+  if (saved === null) return {};
+  const character = JSON.parse(saved);
+  if (!character || typeof character !== "object" || Array.isArray(character)) {
+    throw new Error("The character saved in this browser is invalid.");
+  }
+  return character;
+}
+
+function saveCharacter(changes) {
+  try {
+    const character = {...loadCharacter(), ...changes};
+    localStorage.setItem(characterKey, JSON.stringify(character));
+  } catch (error) {
+    showError("Could not save your character in this browser. Check your browser's storage settings.");
+  }
+}
+
 function append(text) {
   const output = $("output");
   output.append(document.createTextNode(text));
@@ -38,6 +58,7 @@ async function poll(current) {
       if (current !== generation) return;
       for (const event of events) {
         if (event.type === "output") append(event.text);
+        else if (event.type === "character_update") saveCharacter(event.changes);
         else if (event.type === "input") {
           $("prompt").textContent = event.prompt || "Enter your response, or press Enter to continue";
           $("input-form").hidden = false;
@@ -86,7 +107,7 @@ $("start").addEventListener("click", async () => {
   $("start").disabled = true;
   $("error").hidden = true;
   try {
-    await request("/api/start", {});
+    await request("/api/start", {character: loadCharacter()});
     arcade.reset();
     running = true;
     generation++;
