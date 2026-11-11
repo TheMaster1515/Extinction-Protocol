@@ -11,7 +11,7 @@ packages. From the project folder, run:
 python3 web_server.py
 ```
 
-Open [http://localhost:10000](http://localhost:10000). The website uses the
+Open https://extinction-protocol.onrender.com/. The website uses the
 existing story and images, and a browser version of the arcade game. Use the
 arrow keys and X to move and fire in the arcade; touch controls are also
 available. You can return to the story using the button below the game.
