@@ -71,11 +71,11 @@ def chapterx():
             game = chapter7.Game()
             game.chapter7()
         elif success == "8":
-            #if not os.path.exists("files/chapter8_complete.txt"):
-                #print("\n\tChapter 8 is locked. Complete the game first to unlock it.")
-                #pause(3)
-                #print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-                #continue
+            if not os.path.exists("files/chapter8_complete.txt"):
+                print("\n\tChapter 8 is locked. Complete the game first to unlock it.")
+                pause(3)
+                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+                continue
             game = chapter8.Game()
             game.chapter8()
         else:
