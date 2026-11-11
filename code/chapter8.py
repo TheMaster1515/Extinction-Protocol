@@ -1,0 +1,86 @@
+import time
+import subprocess
+import chapterX
+
+
+
+
+class Game:
+    def chapter8(self):
+        print("\n\nWelcome to Chapter 8 - The Secret Level!")
+        print("\nThis appears to be the gateway to a separate mini-game.")
+        print("\nIn the original game, Chapter 8 was implemented as a separate executable game")
+        print("\nThe riddles above were meant to unlock access to this hidden game.")
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**     YOU HAVE JUST UNLOCKED      **")
+        print("\t\t\t\t\t**         A SECRET LEVEL          **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        time.sleep(5)
+        
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**           WELCOME TO            **")
+        print("\t\t\t\t\t**           LEVEL EIGHT           **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        time.sleep(5)
+        
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**           CODED BY              **")
+        print("\t\t\t\t\t**            ALEX                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        time.sleep(5)
+        
+        print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t**            COVER                **")
+        print("\t\t\t\t\t**            ART BY               **")
+        print("\t\t\t\t\t**            LEE                  **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t**                                 **")
+        print("\t\t\t\t\t*************************************")
+        print("\t\t\t\t\t*************************************")
+        time.sleep(5)
+
+        subprocess.run(["python3", "chapter8game/EasterEgg.py"])
+        with open("files/chapter8_complete.txt", "w") as f:
+            f.write("Made By Alex Haworth")
+        print("\nThere is something hidden in each chapter...")
+        time.sleep(3)
+        print("To unlock you need to FOURsee the future...")
+        time.sleep(3)
+        print("Go back to the beginning where it all started...")
+        time.sleep(3)
+        print("You will have to test every decision you have made...")
+        time.sleep(3)
+        print("There is a hidden option on some choices...")
+        time.sleep(3)
+        print("You must enter the correct number to win the prize...")
+        time.sleep(3)
+        input("Press Enter to find the Easter Eggs...")
+        chapterX.chapterx()
+        return True
+if __name__ == "__main__":
+    game = Game()
+    game.chapter8()
