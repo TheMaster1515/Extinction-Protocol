@@ -22,8 +22,58 @@ ROOT = Path(__file__).resolve().parent
 SESSION_LIMIT = 20
 SESSION_TIMEOUT = 30 * 60
 MAX_EVENTS = 10000
+MAX_HIGH_SCORES = 5
+HIGH_SCORES_FILE = ROOT / "files" / "HighScores.txt"
 sessions = {}
 sessions_lock = threading.Lock()
+high_scores_lock = threading.Lock()
+
+
+def read_high_scores():
+    try:
+        lines = HIGH_SCORES_FILE.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+
+    scores = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 2:
+            logging.warning("Ignoring malformed high-score entry")
+            continue
+        name, raw_score = parts
+        try:
+            score = int(raw_score)
+        except ValueError:
+            logging.warning("Ignoring high-score entry with invalid score")
+            continue
+        if len(name) != 3 or not name.isascii() or not name.isalpha() or score < 0:
+            logging.warning("Ignoring invalid high-score entry")
+            continue
+        scores.append({"name": name.upper(), "score": score})
+    scores.sort(key=lambda entry: entry["score"], reverse=True)
+    return scores[:MAX_HIGH_SCORES]
+
+
+def write_high_scores(scores):
+    HIGH_SCORES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=HIGH_SCORES_FILE.parent,
+            prefix=".HighScores.", suffix=".tmp", delete=False,
+        ) as output:
+            temporary_path = Path(output.name)
+            for entry in scores:
+                output.write(f'{entry["name"]} {entry["score"]}\n')
+        os.replace(temporary_path, HIGH_SCORES_FILE)
+    except OSError:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except FileNotFoundError:
+                pass
+        raise
 
 
 class Session:
@@ -129,6 +179,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlsplit(self.path).path
+        if path == "/api/high-scores":
+            try:
+                with high_scores_lock:
+                    scores = read_high_scores()
+            except (OSError, UnicodeError):
+                logging.exception("Unable to read high scores")
+                return self.reply(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Unable to load high scores."})
+            return self.reply(HTTPStatus.OK, {"scores": scores})
         if path == "/api/events":
             session = self.session()
             if not session:
@@ -152,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
-        if path not in ("/api/start", "/api/input", "/api/stop"):
+        if path not in ("/api/start", "/api/input", "/api/stop", "/api/high-scores"):
             return self.reply(HTTPStatus.NOT_FOUND, {"error": "Not found"})
         if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
             return self.reply(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, {"error": "Expected JSON"})
@@ -165,6 +223,27 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Expected object")
         except (ValueError, json.JSONDecodeError):
             return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid request"})
+        if path == "/api/high-scores":
+            name = data.get("name")
+            score = data.get("score")
+            if (
+                not isinstance(name, str) or len(name) != 3
+                or not name.isascii() or not name.isalpha()
+                or type(score) is not int or score < 0 or score > 2_147_483_647
+            ):
+                return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid high score"})
+            entry = {"name": name.upper(), "score": score}
+            try:
+                with high_scores_lock:
+                    scores = read_high_scores()
+                    scores.append(entry)
+                    scores.sort(key=lambda item: item["score"], reverse=True)
+                    scores = scores[:MAX_HIGH_SCORES]
+                    write_high_scores(scores)
+            except (OSError, UnicodeError):
+                logging.exception("Unable to save high scores")
+                return self.reply(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Unable to save high scores."})
+            return self.reply(HTTPStatus.OK, {"scores": scores})
         if path == "/api/start":
             old = self.session()
             if old:

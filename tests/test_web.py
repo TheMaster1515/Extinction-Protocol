@@ -110,6 +110,7 @@ class WebTests(unittest.TestCase):
         self.assertEqual(next(event["path"] for event in events if event["type"] == "image"), "images/background.jpg")
         self.assertEqual(self.request("GET", "/images/background.jpg")[0], 200)
         self.assertEqual(self.request("GET", "/arcade/images/player.png")[0], 200)
+        self.assertEqual(self.request("GET", "/arcade/font/RetroFont.ttf")[0], 200)
 
     def test_moon_chapter_can_be_selected(self):
         cookie = self.start()
@@ -133,6 +134,34 @@ class WebTests(unittest.TestCase):
         self.wait_for(new_cookie, "input")
         status, _, _ = self.request("POST", "/api/start", {}, new_cookie)
         self.assertEqual(status, 200)
+
+    def test_high_scores_are_saved_and_limited_to_top_five(self):
+        with tempfile.TemporaryDirectory() as directory:
+            score_file = Path(directory) / "files" / "HighScores.txt"
+            with mock.patch.object(web_server, "HIGH_SCORES_FILE", score_file):
+                status, _, body = self.request("GET", "/api/high-scores")
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(body)["scores"], [])
+
+                submitted = []
+                for score in (10, 70, 30, 50, 20, 90, 40):
+                    submitted.append(score)
+                    status, _, body = self.request(
+                        "POST", "/api/high-scores", {"name": "you", "score": score}
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(
+                        [entry["score"] for entry in json.loads(body)["scores"]],
+                        sorted(submitted, reverse=True)[:5],
+                    )
+
+                saved = score_file.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(saved, ["YOU 90", "YOU 70", "YOU 50", "YOU 40", "YOU 30"])
+                self.assertEqual(self.request("GET", "/api/high-scores")[0], 200)
+                status, _, _ = self.request(
+                    "POST", "/api/high-scores", {"name": "AB", "score": 100}
+                )
+                self.assertEqual(status, 400)
 
     def test_arcade_bridge(self):
         with mock.patch.object(web_game, "emit") as emit, mock.patch.object(web_game, "protocol_in") as stream:

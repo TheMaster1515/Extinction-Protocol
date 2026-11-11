@@ -13,14 +13,19 @@ python3 web_server.py
 
 Open https://extinction-protocol.onrender.com/. The website uses the
 existing story and images, and a browser version of the arcade game. Use the
-arrow keys and X to move and fire in the arcade; touch controls are also
-available. You can return to the story using the button below the game.
+arrow keys and X to move and fire in the arcade; press P or use the Pause
+button to pause and resume. Touch controls are also available. You can return
+to the story using the button below the game.
+After losing all lives, enter three initials and press Enter or click **Save
+score** to add your score to the high-score list.
 
-Each player gets a separate temporary session. Progress and arcade high scores
-are not saved permanently; starting over, reloading and starting a new game,
-server restarts, or 30 minutes without an active page can lose progress. The
-server supports up to 20 simultaneous sessions. Run only one server process,
-because sessions are held in that process's memory.
+Each player gets a separate temporary story session. Arcade high scores are
+shared and saved in `files/HighScores.txt` on the server. Story progress is
+lost when starting over, reloading and starting a new game, server restarts,
+or 30 minutes without an active page. High scores survive browser reloads, but
+may be lost when the server restarts or redeploys if its filesystem is
+ephemeral. The server supports up to 20 simultaneous sessions. Run only one
+server process, because sessions are held in that process's memory.
 
 ## Deploy to Render
 

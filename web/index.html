@@ -35,11 +35,19 @@
     </section>
     <section id="arcade" class="panel arcade" hidden>
       <h2>Chapter 8: The Hunt for the Egg</h2>
-      <p>Move with the arrow keys or the controls below. Press X or Fire to shoot. Collect prizes and avoid enemy fire.</p>
+      <p>Move with the arrow keys or the controls below. Press X or Fire to shoot, and P or Pause to pause. Collect prizes and avoid enemy fire.</p>
       <canvas id="canvas" width="1000" height="600" aria-label="Chapter 8 arcade game"></canvas>
+      <form id="arcade-initials-form" hidden>
+        <label for="arcade-initials">Enter three initials for the high score</label>
+        <div class="input-row">
+          <input id="arcade-initials" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" required>
+          <button type="submit">Save score</button>
+        </div>
+      </form>
       <p id="arcade-status" role="status"></p>
       <div class="controls">
         <button id="arcade-start">Play</button>
+        <button id="arcade-pause" class="secondary" hidden>Pause</button>
         <button id="arcade-finish" class="secondary">Return to story</button>
       </div>
       <div class="touch-controls" aria-label="Arcade controls">
