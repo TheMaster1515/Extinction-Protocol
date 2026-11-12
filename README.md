@@ -57,3 +57,9 @@ replacing the in-memory session manager.
 
 The original desktop launcher is `TextBaseGame.sh`. It requires Python,
 Pygame, and OpenCV, and is separate from the website.
+
+To play the desktop arcade directly, run `python3 chapter8game/EasterEgg.py`.
+Use the arrow keys to move, X to fire, and P to pause or resume. After game
+over, enter three initials; press P to play again or Q to quit. The desktop
+arcade uses the local `files/HighScores.txt`, shared with a web server running
+from the same project folder (not with a separately hosted server).
