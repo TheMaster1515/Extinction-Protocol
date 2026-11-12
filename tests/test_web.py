@@ -225,8 +225,11 @@ class WebTests(unittest.TestCase):
                 self.assertIn("1 through 8" if unlocked else "1 through 7", prompt)
                 self.answer(cookie, "8")
                 if unlocked:
-                    events = self.wait_for(cookie, "output")
-                    self.assertIn("Welcome to Chapter 8", "".join(event.get("text", "") for event in events))
+                    events = self.wait_for(cookie, "arcade")
+                    self.assertNotIn("Welcome to Chapter 8", "".join(event.get("text", "") for event in events))
+                    self.answer(cookie, "")
+                    events = self.wait_for(cookie, "input")
+                    self.assertIn("8.Chapter 8", "".join(event.get("text", "") for event in events))
                 else:
                     events = self.wait_for(cookie, "input", timeout=5)
                     self.assertIn("Chapter 8 is locked", "".join(event.get("text", "") for event in events))
@@ -449,6 +452,7 @@ assert os.path.exists("files/chapter8_complete.txt")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('"type": "arcade"', result.stdout)
         self.assertIn('"type": "chapter8_unlocked"', result.stdout)
+        self.assertIn("Welcome to Chapter 8", result.stdout)
         self.assertIn("There is something hidden in each chapter", result.stdout)
 
 

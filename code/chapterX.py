@@ -77,8 +77,7 @@ def chapterx():
                 pause(3)
                 print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
                 continue
-            game = chapter8.Game()
-            game.chapter8()
+            chapter8.play_arcade()
         else:
             print("\n\tInvalid option. Please enter 1 through 7.")
             pause(3)

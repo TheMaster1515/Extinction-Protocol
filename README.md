@@ -25,6 +25,7 @@ Designing a new character replaces the name, age, and colony; the friend, ship,
 and job remain until new choices are made.
 After you finish Chapter 8 and return from the arcade, its unlock is also saved
 in that browser and remains available after refreshing or starting over.
+Selecting Chapter 8 again opens the arcade directly, skipping its introduction.
 Choose **Start at a level** to go straight to chapter selection using the saved
 character, or **Design your character** to enter new details. If no character
 is saved, missing details are shown as Unknown and age is 0.

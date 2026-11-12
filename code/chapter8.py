@@ -8,6 +8,10 @@ def unlock_chapter8():
         f.write("Made By Alex Haworth")
 
 
+def play_arcade():
+    subprocess.run(["python3", "chapter8game/EasterEgg.py"])
+
+
 class Game:
     def chapter8(self):
         print("\n\nWelcome to Chapter 8 - The Secret Level!")
@@ -66,7 +70,7 @@ class Game:
         print("\t\t\t\t\t*************************************")
         time.sleep(5)
 
-        subprocess.run(["python3", "chapter8game/EasterEgg.py"])
+        play_arcade()
         unlock_chapter8()
         print("\nThere is something hidden in each chapter...")
         time.sleep(3)
