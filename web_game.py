@@ -71,6 +71,7 @@ def main():
     try:
         import chapterZ
         import chapter2
+        import chapter8
         import character_data
 
         class WebCharacterManager(chapterZ.CharacterManager):
@@ -93,9 +94,16 @@ def main():
                 changes["Ship"] = ship
             emit("character_update", changes=changes)
 
+        unlock_chapter8 = chapter8.unlock_chapter8
+
+        def unlock_web_chapter8():
+            unlock_chapter8()
+            emit("chapter8_unlocked")
+
         chapterZ.CharacterManager = WebCharacterManager
         chapter2.save_job = save_web_job
         character_data.save_character_work = save_web_character_work
+        chapter8.unlock_chapter8 = unlock_web_chapter8
         chapterZ.chapterz()
     except EOFError:
         pass

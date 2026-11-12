@@ -23,6 +23,8 @@ Each player gets a separate temporary story session. Character details are saved
 in the browser on that device, separately for each browser and website address.
 Designing a new character replaces the name, age, and colony; the friend, ship,
 and job remain until new choices are made.
+After you finish Chapter 8 and return from the arcade, its unlock is also saved
+in that browser and remains available after refreshing or starting over.
 Choose **Start at a level** to go straight to chapter selection using the saved
 character, or **Design your character** to enter new details. If no character
 is saved, missing details are shown as Unknown and age is 0.
@@ -30,7 +32,7 @@ The old shared `files/character.txt` and `files/job.txt` are left untouched and
 are not imported into browser saves. Clearing browser storage or using private
 browsing may remove your character. The desktop game continues to use its local
 character file.
-Arcade high scores are shared and saved in `files/HighScores.txt` on the server. Story progress is
+Arcade high scores are shared and saved in `files/HighScores.txt` on the server. Other story progress is
 lost when starting over, reloading and starting a new game, server restarts,
 or 30 minutes without an active page. Browser character saves survive reloads
 and server restarts. High scores may be lost when the server restarts or

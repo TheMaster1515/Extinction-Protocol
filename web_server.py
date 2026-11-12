@@ -96,7 +96,7 @@ def write_high_scores(scores):
 
 
 class Session:
-    def __init__(self, character):
+    def __init__(self, character, chapter8_unlocked):
         self.directory = tempfile.TemporaryDirectory(prefix="extinction-")
         try:
             if character:
@@ -104,6 +104,10 @@ class Session:
                     Path(self.directory.name) / "files" / "character.txt",
                     **character_data.prepare_character(character),
                 )
+            if chapter8_unlocked:
+                marker = Path(self.directory.name) / "files" / "chapter8_complete.txt"
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.write_text("Made By Alex Haworth", encoding="utf-8")
             self.process = subprocess.Popen(
                 [sys.executable, "-B", "-u", str(ROOT / "web_game.py")],
                 cwd=self.directory.name,
@@ -276,6 +280,9 @@ class Handler(BaseHTTPRequestHandler):
             character = data.get("character", {})
             if not valid_character(character):
                 return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid saved character data."})
+            chapter8_unlocked = data.get("chapter8Unlocked", False)
+            if type(chapter8_unlocked) is not bool:
+                return self.reply(HTTPStatus.BAD_REQUEST, {"error": "Invalid chapter unlock data."})
             old = self.session()
             if old:
                 with sessions_lock:
@@ -288,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
                 if len(sessions) >= SESSION_LIMIT:
                     return self.reply(HTTPStatus.SERVICE_UNAVAILABLE, {"error": "The server is full. Please try again later."})
                 try:
-                    session = Session(character)
+                    session = Session(character, chapter8_unlocked)
                 except OSError:
                     logging.exception("Unable to start game")
                     return self.reply(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": "Unable to start the game."})

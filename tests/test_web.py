@@ -58,8 +58,10 @@ class WebTests(unittest.TestCase):
         connection.close()
         return status, headers, contents
 
-    def start(self, design=True, character=None):
-        status, headers, _ = self.request("POST", "/api/start", {"character": character or {}})
+    def start(self, design=True, character=None, chapter8_unlocked=False):
+        status, headers, _ = self.request(
+            "POST", "/api/start", {"character": character or {}, "chapter8Unlocked": chapter8_unlocked}
+        )
         self.assertEqual(status, 200)
         cookie = headers["Set-Cookie"].split(";", 1)[0]
         self.characters[cookie] = dict(character or {})
@@ -209,6 +211,28 @@ class WebTests(unittest.TestCase):
             with self.subTest(character=character):
                 status, _, _ = self.request("POST", "/api/start", {"character": character})
                 self.assertEqual(status, 400)
+
+    def test_chapter_eight_unlock_is_restored_per_session(self):
+        for unlocked in (True, False, True):
+            with self.subTest(unlocked=unlocked):
+                cookie = self.start(design=False, chapter8_unlocked=unlocked)
+                self.wait_for(cookie, "input")
+                self.answer(cookie, "1")
+                events = self.wait_for(cookie, "input")
+                output = "".join(event.get("text", "") for event in events)
+                self.assertEqual("8.Chapter 8" in output, unlocked)
+                prompt = next(event["prompt"] for event in events if event["type"] == "input")
+                self.assertIn("1 through 8" if unlocked else "1 through 7", prompt)
+                self.answer(cookie, "8")
+                if unlocked:
+                    events = self.wait_for(cookie, "output")
+                    self.assertIn("Welcome to Chapter 8", "".join(event.get("text", "") for event in events))
+                else:
+                    events = self.wait_for(cookie, "input", timeout=5)
+                    self.assertIn("Chapter 8 is locked", "".join(event.get("text", "") for event in events))
+        for invalid in ("true", 1, None, {}):
+            with self.subTest(invalid=invalid):
+                self.assertEqual(self.request("POST", "/api/start", {"chapter8Unlocked": invalid})[0], 400)
 
     def test_friend_and_ship_are_combined_with_character_in_both_paths(self):
         for chapter, choices in (
@@ -404,19 +428,17 @@ class WebTests(unittest.TestCase):
     def test_chapter_eight_hands_off_and_returns_to_story(self):
         root = str(Path(web_game.__file__).resolve().parent)
         code = """
-import builtins, io, os, subprocess, sys
+import io, os, sys
 sys.path.insert(0, sys.argv[1])
 import web_game
 sys.path.insert(0, os.path.join(sys.argv[1], "code"))
 sys.modules["cv2"] = web_game.make_cv2()
-import chapter8
+import chapter8, chapterZ
 chapter8.time.sleep = lambda seconds: None
 chapter8.chapterX.chapterx = lambda: None
-builtins.input = lambda prompt="": ""
-web_game.protocol_in = io.StringIO("\\n")
-subprocess.run = web_game.run_arcade
-os.mkdir("files")
-chapter8.Game().chapter8()
+chapterZ.chapterz = lambda: chapter8.Game().chapter8()
+web_game.protocol_in = io.StringIO("\\n\\n")
+web_game.main()
 assert os.path.exists("files/chapter8_complete.txt")
 """
         with tempfile.TemporaryDirectory() as directory:
@@ -426,6 +448,7 @@ assert os.path.exists("files/chapter8_complete.txt")
             )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('"type": "arcade"', result.stdout)
+        self.assertIn('"type": "chapter8_unlocked"', result.stdout)
         self.assertIn("There is something hidden in each chapter", result.stdout)
 
 

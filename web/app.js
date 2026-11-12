@@ -2,6 +2,7 @@
 
 const $ = id => document.getElementById(id);
 const characterKey = "extinction.character";
+const chapter8Key = "extinction.chapter8Unlocked";
 let running = false;
 let generation = 0;
 let submitting = false;
@@ -42,6 +43,21 @@ function saveCharacter(changes) {
   }
 }
 
+function loadChapter8Unlock() {
+  const saved = localStorage.getItem(chapter8Key);
+  if (saved === null) return false;
+  if (saved === "true") return true;
+  throw new Error("The Chapter 8 unlock saved in this browser is invalid.");
+}
+
+function saveChapter8Unlock() {
+  try {
+    localStorage.setItem(chapter8Key, "true");
+  } catch (error) {
+    showError("Could not save your Chapter 8 unlock in this browser. Check your browser's storage settings.");
+  }
+}
+
 function append(text) {
   const output = $("output");
   output.append(document.createTextNode(text));
@@ -59,6 +75,7 @@ async function poll(current) {
       for (const event of events) {
         if (event.type === "output") append(event.text);
         else if (event.type === "character_update") saveCharacter(event.changes);
+        else if (event.type === "chapter8_unlocked") saveChapter8Unlock();
         else if (event.type === "input") {
           $("prompt").textContent = event.prompt || "Enter your response, or press Enter to continue";
           $("input-form").hidden = false;
@@ -107,7 +124,7 @@ $("start").addEventListener("click", async () => {
   $("start").disabled = true;
   $("error").hidden = true;
   try {
-    await request("/api/start", {character: loadCharacter()});
+    await request("/api/start", {character: loadCharacter(), chapter8Unlocked: loadChapter8Unlock()});
     arcade.reset();
     running = true;
     generation++;

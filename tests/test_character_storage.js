@@ -84,3 +84,28 @@ test("game character updates are saved to the browser", async () => {
     Name: "Alice", Age: "25", Colony: "America", Job: "Pilot"
   });
 });
+
+test("chapter 8 unlock survives reload and stays separate between browsers", async () => {
+  const computer = browser(new Map(), false, [
+    {type: "chapter8_unlocked"},
+    {type: "finished"}
+  ]);
+  const phone = browser();
+  await computer.elements.get("start").handlers.click();
+  await new Promise(resolve => setImmediate(resolve));
+  const reloaded = browser(computer.storage);
+  await reloaded.elements.get("start").handlers.click();
+  await phone.elements.get("start").handlers.click();
+  assert.equal(JSON.parse(reloaded.requests[0].options.body).chapter8Unlocked, true);
+  assert.equal(JSON.parse(phone.requests[0].options.body).chapter8Unlocked, false);
+});
+
+test("chapter unlock storage failure is reported", async () => {
+  const tab = browser(new Map(), true, [
+    {type: "chapter8_unlocked"},
+    {type: "finished"}
+  ]);
+  await tab.elements.get("start").handlers.click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(tab.elements.get("error").textContent, /Could not save.*Chapter 8/i);
+});

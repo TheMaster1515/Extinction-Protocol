@@ -3,6 +3,9 @@ import subprocess
 import chapterX
 
 
+def unlock_chapter8():
+    with open("files/chapter8_complete.txt", "w") as f:
+        f.write("Made By Alex Haworth")
 
 
 class Game:
@@ -64,8 +67,7 @@ class Game:
         time.sleep(5)
 
         subprocess.run(["python3", "chapter8game/EasterEgg.py"])
-        with open("files/chapter8_complete.txt", "w") as f:
-            f.write("Made By Alex Haworth")
+        unlock_chapter8()
         print("\nThere is something hidden in each chapter...")
         time.sleep(3)
         print("To unlock you need to FOURsee the future...")

@@ -33,12 +33,13 @@ def chapterx():
         if chapter8_unlocked:
             print("\n\t8.Chapter 8")
 
+        last_chapter = 8 if chapter8_unlocked else 7
         try:
-            success = input("\nChoose an option (1 through 7): ").strip()
+            success = input(f"\nChoose an option (1 through {last_chapter}): ").strip()
             if success not in ("1", "2", "2.1", "2.2", "3", "4", "5", "6", "7", "8"):
                 raise ValueError
         except ValueError:
-            print("\n\tInvalid option. Please enter 1 through 7.")
+            print(f"\n\tInvalid option. Please enter 1 through {last_chapter}.")
             pause(3)
             print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
             continue
